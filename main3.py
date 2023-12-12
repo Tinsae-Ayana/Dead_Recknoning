@@ -33,7 +33,7 @@ def skew_matrix(dic):
     
 # extract time
 def extract_time(dic) : 
-    return dic['header']['stamp']['sec'] + (dic['header']['stamp']['nanosec'] / 1000000000) #change the nano to second by dividing 10^9
+    return dic['header']['stamp']['sec'] + (dic['header']['stamp']['nanosec'] / 1000000000) # change the nano to second by dividing 10^9
 
 # extract acceleration in the givin axis
 def extract_acc_axis(dic,axis,bias, sf) :
@@ -42,31 +42,31 @@ def extract_acc_axis(dic,axis,bias, sf) :
 # extract acceleration using velocity vector
 def extract(data, timepoints, bias, sf):
     I  = np.array([[1, 0, 0],
-                           [0, 1, 0],
-                           [0, 0, 1]])
+                   [0, 1, 0],
+                   [0, 0, 1]])
     R_K = I.copy()
-    acc_x = detrend(list(map(lambda x: extract_acc_axis(x,'x', bias = bias[0], sf=sf[0]), data)))
-    acc_y = detrend(list(map(lambda x: extract_acc_axis(x,'y', bias = bias[1], sf=sf[1]), data)))
-    acc_z = detrend(list(map(lambda x: extract_acc_axis(x,'z', bias = bias[2], sf=sf[2]), data)))
+    acc_x = (list(map(lambda x: extract_acc_axis(x,'x', bias = bias[0], sf=sf[0]), data)))
+    acc_y = (list(map(lambda x: extract_acc_axis(x,'y', bias = bias[1], sf=sf[1]), data)))
+    acc_z = (list(map(lambda x: extract_acc_axis(x,'z', bias = bias[2], sf=sf[2]), data)))
     acc_x_trn = np.zeros(len(acc_x))
     acc_x_trn[0] = acc_x[0]
     acc_y_trn = np.zeros(len(acc_y))
     acc_y_trn[0] = acc_y[0]
     acc_z_trn = np.zeros(len(acc_z))
     acc_z_trn[0] = acc_z[0]
+    
     for i in range(1,len(timepoints)):
         deltaT = timepoints[i]-timepoints[i-1]
         ang_vel = extract_angvel(data=data[i])
         theta_x = ang_vel[0] * deltaT
         theta_y = ang_vel[1] * deltaT
         theta_z = ang_vel[2] * deltaT
-        theta   = np.sqrt(theta_x**2 + theta_y**2 + theta_z**2) * deltaT**2
+        theta   = np.sqrt(theta_x**2 + theta_y**2 + theta_z**2) * deltaT ** 2
         skew_mtrx = skew_matrix(data[i]) 
-        print('Skew matrix : ',skew_matrix)
-        S = skew_mtrx * deltaT
+        S = skew_mtrx * deltaT 
         s = np.sin(theta)/theta
         c = (1- np.cos(theta)) / theta ** 2
-        R_K1 = R_K @ (I + S * s + c* S  @ S )
+        R_K1 = R_K @ (I + s * S  + c * S  @ S )
         R_K = R_K1
         acc_trn = R_K1 @ np.array([[acc_x[i]],[acc_y[i]],[acc_z[i]]])
         print("type of acc_trn", acc_trn)
@@ -134,9 +134,9 @@ def main() :
     acc_y =  (acclrtn['acc_y'])  # get acceleration in y direction
     acc_z =  (acclrtn['acc_z'])  # get accelration in z direction
     # get the velocity
-    vel_x = detrend(est_vel(acc_x,time_points))
-    vel_y = detrend(est_vel(acc_y,time_points)) 
-    vel_z = detrend(est_vel(acc_z,time_points))
+    vel_x = (est_vel(acc_x,time_points))
+    vel_y = (est_vel(acc_y,time_points)) 
+    vel_z = (est_vel(acc_z,time_points))
     # get the position
     pos_x = est_position(vel_x,time_points)
     pos_y = est_position(vel_y,time_points)

@@ -102,13 +102,13 @@ def plot_3D(xdata, ydata, zdata):
     plt.savefig('Trajectory_plot.png')
     plt.show()
 
-
 def main() :
-    # calibartion datas
-    bias_x =0 #0.00273906
-    bias_y =0 #0.01719892
-    bias_z =0 #-0.002825
+    # bias
+    bias_x = 0 #0.00273906
+    bias_y = 0 #0.01719892
+    bias_z = 0 #-0.002825
     bias = [bias_x, bias_y, bias_z]
+    # scale factor
     sf_x   = 0 #0.00068967
     sf_y   = 0 #0.0003230
     sf_z   = 0 #0.00147083
@@ -121,9 +121,9 @@ def main() :
     # get the acceleration
     print('extracting acceleration data...') # this is goint to be changed
     acclrtn = list(map(lambda a : extract_acc(a, bias=bias,sf=sf), data))
-    acc_x =  (list(map( lambda d : d[0][0], acclrtn))) # get acceleration in x direction
-    acc_y =  (list(map( lambda d : d[1][0], acclrtn)))  # get acceleration in y direction
-    acc_z =  detrend(list(map( lambda d : d[2][0], acclrtn)))  # get accelration in z direction
+    acc_x =  (list(map( lambda d : d[0, 0], acclrtn)))  # get acceleration in x direction
+    acc_y =  (list(map( lambda d : d[1, 0], acclrtn)))  # get acceleration in y direction
+    acc_z =  (list(map( lambda d : d[2, 0], acclrtn)))  # get accelration in z direction
     # get the velocity
     vel_x = (est_vel(acc_x,time_points))
     vel_y = (est_vel(acc_y,time_points))
@@ -133,10 +133,10 @@ def main() :
     pos_y = est_position(vel_y,time_points)
     pos_z = est_position(vel_z,time_points)
     # plot
-    plot_2D(pos_x,pos_y,xlabel='x-position', ylabel='y-position', title='position-xy-plane')
+    # plot_2D(pos_x,pos_y,xlabel='x-position', ylabel='y-position', title='position-xy-plane')
     # plot_2D(time_points,vel_x,xlabel='time', ylabel='vel-x', title='velocity-x')
     # plot_2D(time_points,vel_y,xlabel='time', ylabel='vel-y', title='velocity-y')
     # plot_3D(pos_x, pos_y, pos_z)
-    # plot_2D(time_points,acc_x,xlabel='time', ylabel='vel-y', title='velocity-y')
+    plot_2D(time_points,acc_z,xlabel='time', ylabel='Acceleration z', title='Acceleration')
 
 main()

@@ -15,25 +15,16 @@ def read_yaml(filepath) :
 
 # extract the time stamp of the measurement
 def extract_time(dic) : 
-    return dic['header']['stamp']['sec'] + (dic['header']['stamp']['nanosec'] / 1000000000) #change the nano to second by dividing 10^9
+    return dic['header']['stamp']['sec'] + (dic['header']['stamp']['nanosec'] / 1000000000) # change the nano to second by dividing 10^9
 
 # extract the accleration for each axis
 def extract_acc(acc,axis,bias, sf) :
-    # print('this is for :' + axis,acc['linear_acceleration'][axis])
-    # return (acc['linear_acceleration'][axis] - bias) / (1 + sf)
-    # return acc['linear_acceleration'][axis]
     return acc['linear_acceleration'][axis]
 
 # estimate velocity
 def est_vel(acc, timepoints) :
     print('estimating velocity by integrating acc...')
     vel = np.zeros_like(acc)
-    # method-1
-    # for i in range(len(acc)):
-    #     vel[i] = integrate.simps(acc[0:i+1],timepoints[0:i+1])
-    # method-2
-    # for i in range(len(vel)) :
-    #      vel[i] = np.trapz(acc[0:i+1],timepoints[0:i+1],axis=None)
     vel = integrate.cumtrapz(acc,x=timepoints,initial=0)
     return vel
 
@@ -41,12 +32,6 @@ def est_vel(acc, timepoints) :
 def est_position(vel ,timepoints) :
     print('estimating position by integrating vel...')
     position = np.zeros_like(vel)
-    # method-1
-    # for i in range(len(vel)) :
-    #     position[i] = integrate.simps(vel[0:i+1],timepoints[0:i+1])
-    # method-2
-    # for i in range(len(vel)) :
-    #      position[i] = np.trapz(vel[0:i+1],timepoints[0:i+1],axis=None)
     position  = integrate.cumtrapz(vel,timepoints,initial=0)
     return position
 
@@ -80,28 +65,23 @@ if __name__ == "__main__" :
     sf_y   = 0.0003230
     sf_z   = 0.00147083
     gravity = 9.8
-    file_path = '35acc.yaml'
+    file_path = 'imu_data.yaml'
     data = read_yaml(filepath=file_path)
     print('extracting time points....')
     time_points = list(map(lambda x: extract_time(x),data))
     # get the acceleration
     print('extracting acceleration data...')
-    acc_x =  detrend(list(map(lambda x: extract_acc(x,'x', bias_x, sf_x),data))) # get acceleration in x direction
-    acc_y =  detrend(list(map(lambda x: extract_acc(x,'y', bias_y, sf_y),data)))  # get acceleration in y direction
-    acc_z =  detrend(list(map(lambda x: extract_acc(x,'z', bias_z, sf_z),data)))  # get accelration in z direction
+    acc_x = (list(map(lambda x: extract_acc(x,'x', bias_x, sf_x),data)))  # get acceleration in x direction
+    acc_y = (list(map(lambda x: extract_acc(x,'y', bias_y, sf_y),data)))  # get acceleration in y direction
+    acc_z = (list(map(lambda x: extract_acc(x,'z', bias_z, sf_z),data)))  # get accelration in z direction
     # get the velocity
-    vel_x = detrend(est_vel(acc_x,time_points))
-    vel_y = detrend(est_vel(acc_y,time_points))
-    vel_z = detrend(est_vel(acc_y,time_points))
+    vel_x = (est_vel(acc_x,time_points))
+    vel_y = (est_vel(acc_y,time_points))
+    vel_z = (est_vel(acc_y,time_points))
     # get the position
     pos_x = est_position(vel_x,time_points)
     pos_y = est_position(vel_y,time_points)
     pos_z = est_position(vel_z,time_points)
 
     plot_2D(pos_x,pos_y,xlabel='x-position', ylabel='y-position', title='position-xy-plane')
-    # plot_2D(time_points,vel_x,xlabel='time', ylabel='vel-x', title='velocity-x')
-    # plot_2D(time_points,vel_y,xlabel='time', ylabel='vel-y', title='velocity-y')
-    # plot_3D(pos_x, pos_y, pos_z)
-    # plot_2D(time_points, acc_x,xlabel='time', ylabel='acc-y', title='acc-x')
-    
-                
+       
