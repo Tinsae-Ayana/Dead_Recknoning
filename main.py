@@ -15,13 +15,14 @@ def read_yaml(filepath) :
 
 # extract the time stamp of the measurement
 def extract_time(dic) : 
-    print(dic['header']['stamp']['sec'] + (dic['header']['stamp']['nanosec'] / 1000000000))
-    return dic['header']['stamp']['sec'] + (dic['header']['stamp']['nanosec'] / 1000000000)
+    return dic['header']['stamp']['sec'] + (dic['header']['stamp']['nanosec'] / 1000000000) #change the nano to second by dividing 10^9
 
 # extract the accleration for each axis
 def extract_acc(acc,axis,bias, sf) :
     # print('this is for :' + axis,acc['linear_acceleration'][axis])
-    return (acc['linear_acceleration'][axis] - bias) / (1 + sf)
+    # return (acc['linear_acceleration'][axis] - bias) / (1 + sf)
+    # return acc['linear_acceleration'][axis]
+    return acc['linear_acceleration'][axis]
 
 # estimate velocity
 def est_vel(acc, timepoints) :
@@ -55,14 +56,22 @@ def plot_2D(xdata,ydata, xlabel, ylabel,title):
     plt.xlabel(xlabel=xlabel)
     plt.ylabel(ylabel=ylabel)
     plt.title(title)
+    plt.savefig('{}.png'.format(title))
     plt.show()
 
 # plot 3d data
 def plot_3D(xdata, ydata, zdata):
-    pass
+    fig = plt.figure()
+    ax  = fig.add_subplot(111, projection='3d')
+    ax.plot(xdata,ydata,zdata,label='Trajectory')
+    ax.set_xlabel("x")
+    ax.set_ylabel("y")
+    ax.set_zlabel("z")
+    ax.legend()
+    plt.savefig('Trajectory_plot.png')
+    plt.show()
 
 if __name__ == "__main__" :
-
     # calibartion datas
     bias_x = 0.00273906
     bias_y = 0.01719892
@@ -70,7 +79,8 @@ if __name__ == "__main__" :
     sf_x   = 0.00068967
     sf_y   = 0.0003230
     sf_z   = 0.00147083
-    file_path = 'imu_data.yaml'
+    gravity = 9.8
+    file_path = '35acc.yaml'
     data = read_yaml(filepath=file_path)
     print('extracting time points....')
     time_points = list(map(lambda x: extract_time(x),data))
@@ -78,19 +88,20 @@ if __name__ == "__main__" :
     print('extracting acceleration data...')
     acc_x =  detrend(list(map(lambda x: extract_acc(x,'x', bias_x, sf_x),data))) # get acceleration in x direction
     acc_y =  detrend(list(map(lambda x: extract_acc(x,'y', bias_y, sf_y),data)))  # get acceleration in y direction
-    # acc_z = list(map(lambda x: extract_acc(x,'z', bias_z, sf_z),data))  # get accelration in z direction
+    acc_z =  detrend(list(map(lambda x: extract_acc(x,'z', bias_z, sf_z),data)))  # get accelration in z direction
     # get the velocity
     vel_x = detrend(est_vel(acc_x,time_points))
     vel_y = detrend(est_vel(acc_y,time_points))
-    # vel_z = est_vel(acc_y,time_points)
-    # # get the position
+    vel_z = detrend(est_vel(acc_y,time_points))
+    # get the position
     pos_x = est_position(vel_x,time_points)
     pos_y = est_position(vel_y,time_points)
-    # pos_z = est_position(vel_z,time_points)
+    pos_z = est_position(vel_z,time_points)
 
-    plot_2D(pos_x,pos_y,xlabel='x-position', ylabel='y-position', title='position')
-    # plot_2D(time_points,vel_x,xlabel='time', ylabel='x-position', title='x-position')
-    # plot_2D(time_points,vel_y,xlabel='time', ylabel='y-position', title='xy-plane')
-
-
+    plot_2D(pos_x,pos_y,xlabel='x-position', ylabel='y-position', title='position-xy-plane')
+    # plot_2D(time_points,vel_x,xlabel='time', ylabel='vel-x', title='velocity-x')
+    # plot_2D(time_points,vel_y,xlabel='time', ylabel='vel-y', title='velocity-y')
+    # plot_3D(pos_x, pos_y, pos_z)
+    # plot_2D(time_points, acc_x,xlabel='time', ylabel='acc-y', title='acc-x')
+    
                 
