@@ -130,12 +130,12 @@ def main() :
     # get the acceleration
     print('extracting acceleration data...') # this is goint to be changed
     acclrtn = extract(data=data,bias=bias,sf=sf, timepoints=time_points)
-    acc_x =  detrend(acclrtn['acc_x'])  # get acceleration in x direction
-    acc_y =  detrend(acclrtn['acc_y'])  # get acceleration in y direction
-    acc_z =  detrend(acclrtn['acc_z'])  # get accelration in z direction
+    acc_x =  (acclrtn['acc_x'])  # get acceleration in x direction
+    acc_y =  (acclrtn['acc_y'])  # get acceleration in y direction
+    acc_z =  (acclrtn['acc_z'])  # get accelration in z direction
     # get the velocity
-    vel_x = detrend(est_vel(acc_x,time_points))
-    vel_y = detrend(est_vel(acc_y,time_points)) 
+    vel_x = (est_vel(acc_x,time_points))
+    vel_y = (est_vel(acc_y,time_points)) 
     vel_z = (est_vel(acc_z,time_points))
     # get the position
     pos_x = (est_position(vel_x,time_points))

@@ -133,7 +133,7 @@ def main() :
     # get the acceleration
     print('extracting acceleration data...') # this is goint to be changed
     acclrtn =  list(map(lambda a : extract_acc(a, bias=bias,sf=sf), data))
-    acc_x   =  (list(map( lambda d : d[0, 0], acclrtn)))  # get acceleration in x direction
+    acc_x   =  (list(map( lambda d : d[0, 0], acclrtn)))  # get acceleration i n x direction
     acc_y   =  (list(map( lambda d : d[1, 0], acclrtn)))  # get acceleration in y direction
     acc_z   =  (list(map( lambda d : d[2, 0], acclrtn)))  # get accelration in z direction
     # get the velocity
