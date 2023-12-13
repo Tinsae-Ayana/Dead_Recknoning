@@ -54,7 +54,7 @@ def extract(data, timepoints, bias, sf):
     acc_y_trn[0] = acc_y[0]
     acc_z_trn = np.zeros(len(acc_z))
     acc_z_trn[0] = acc_z[0]
-    
+    gravity = np.array([[0], [0], [9.8]])
     for i in range(1,len(timepoints)):
         deltaT = timepoints[i]-timepoints[i-1]
         ang_vel = extract_angvel(data=data[i])
@@ -67,9 +67,8 @@ def extract(data, timepoints, bias, sf):
         s = np.sin(theta)/theta
         c = (1- np.cos(theta)) / theta ** 2
         R_K1 = R_K @ (I + s * S  + c * S  @ S )
+        acc_trn = R_K1 @ np.array([[acc_x[i]],[acc_y[i]],[acc_z[i]]]) #- R_K1 @ gravity
         R_K = R_K1
-        acc_trn = R_K1 @ np.array([[acc_x[i]],[acc_y[i]],[acc_z[i]]])
-        print("type of acc_trn", acc_trn)
         acc_x_trn[i] = acc_trn[0, 0]
         acc_y_trn[i] = acc_trn[1, 0]
         acc_z_trn[i] = acc_trn[2, 0]
@@ -112,11 +111,12 @@ def plot_3D(xdata, ydata, zdata):
     plt.savefig('Trajectory_plot.png')
     plt.show()
 
+
 def main() :
     # calibartion datas
-    bias_x =0 #0.00273906
-    bias_y =0 #0.01719892
-    bias_z =0 #-0.002825
+    bias_x = 0 #0.00273906
+    bias_y = 0 #0.01719892
+    bias_z = 0 #-0.002825
     bias = [bias_x, bias_y, bias_z]
     sf_x   = 0 #0.00068967
     sf_y   = 0 #0.0003230
@@ -130,22 +130,25 @@ def main() :
     # get the acceleration
     print('extracting acceleration data...') # this is goint to be changed
     acclrtn = extract(data=data,bias=bias,sf=sf, timepoints=time_points)
-    acc_x =  (acclrtn['acc_x']) # get acceleration in x direction
-    acc_y =  (acclrtn['acc_y'])  # get acceleration in y direction
-    acc_z =  (acclrtn['acc_z'])  # get accelration in z direction
+    acc_x =  detrend(acclrtn['acc_x'])  # get acceleration in x direction
+    acc_y =  detrend(acclrtn['acc_y'])  # get acceleration in y direction
+    acc_z =  detrend(acclrtn['acc_z'])  # get accelration in z direction
     # get the velocity
-    vel_x = (est_vel(acc_x,time_points))
-    vel_y = (est_vel(acc_y,time_points)) 
+    vel_x = detrend(est_vel(acc_x,time_points))
+    vel_y = detrend(est_vel(acc_y,time_points)) 
     vel_z = (est_vel(acc_z,time_points))
     # get the position
-    pos_x = est_position(vel_x,time_points)
-    pos_y = est_position(vel_y,time_points)
+    pos_x = (est_position(vel_x,time_points))
+    pos_y = (est_position(vel_y,time_points))
     pos_z = est_position(vel_z,time_points)
     # plot
     plot_2D(pos_x,pos_y,xlabel='x-position', ylabel='y-position', title='position-xy-plane')
-    # plot_2D(time_points,vel_x,xlabel='time', ylabel='vel-x', title='velocity-x')
-    # plot_2D(time_points,vel_y,xlabel='time', ylabel='vel-y', title='velocity-y')
-    # plot_3D(pos_x, pos_y, pos_z)
-    # plot_2D(time_points,acc_x,xlabel='time', ylabel='vel-y', title='velocity-y')
+    plot_2D(time_points,vel_x,xlabel='time', ylabel='vel-x', title='velocity-x')
+    plot_2D(time_points,vel_y,xlabel='time', ylabel='vel-y', title='velocity-y')
+    #plot_3D(pos_x, pos_y, pos_z)
+    plot_2D(time_points,acc_z,xlabel='time', ylabel='acc-z', title='acc_z')
 
 main()
+
+
+# i got better result only detrending velocity and displacment only

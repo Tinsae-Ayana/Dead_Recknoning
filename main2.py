@@ -3,8 +3,8 @@ import scipy.integrate as integrate
 from scipy.signal import detrend
 import numpy as np
 import matplotlib.pyplot as plt
+from scipy.spatial.transform import Rotation
 from mpl_toolkits.mplot3d import Axes3D
-
 
 # read yaml file and return the data as python dictionary
 def read_yaml(filepath) :  
@@ -24,10 +24,13 @@ def extract_quternions(dic) :
 
 # change the quternion to rotation matrix
 def quaternion_to_matrix(qtrn) :
+  
    q0 = qtrn['w']
    q1 = qtrn['x']
    q2 = qtrn['y']
    q3 = qtrn['z']
+   rotation_vec = [q1,q2,q3]
+   rotation_matrix = Rotation.from_rotvec(rotation_vec).as_matrix()
    # First row of the rotation matrix
    r00 = 2 * (q0 * q0 + q1 * q1) - 1
    r01 = 2 * (q1 * q2 - q0 * q3)
@@ -45,9 +48,10 @@ def quaternion_to_matrix(qtrn) :
     
    # 3x3 rotation matrix
    rot_matrix = np.array([[r00, r01, r02],
-                        [r10, r11, r12],
-                        [r20, r21, r22]])          
-   return rot_matrix
+                          [r10, r11, r12],
+                          [r20, r21, r22]])          
+#    return rot_matrix
+   return rotation_matrix
 
 # extract the accleration for each axis
 def extract_acc(dic,bias, sf) :
@@ -62,7 +66,8 @@ def extract_acc(dic,bias, sf) :
     # apply scale factor and bias before transforming it
     for i in range(3):
         acc[i] = (acc[i] - bias[i]) / (1 + sf[i])
-    acc_tranformed = rotation_matrix @ acc.reshape((-1,1)) # 3,1 column vector
+    gravity = np.array([[0], [0], [9.8]])
+    acc_tranformed = rotation_matrix @ acc.reshape((-1,1)) - rotation_matrix @ gravity # 3,1 column vector
     return acc_tranformed
 
 # estimate velocity
@@ -70,6 +75,13 @@ def est_vel(acc, timepoints) :
     print('estimating velocity by integrating acc...')
     vel = np.zeros_like(acc)
     vel = integrate.cumtrapz(acc,x=timepoints,initial=0)
+
+    # velocity = np.zeros_like(acc)
+    # velocity[0] = 0
+
+    # for i in range(1,len(vel)) :
+    #     delta = timepoints[i]- timepoints[i-1]
+    #     velocity[i] = acc[i] * delta
     return vel
 
 # estimate displacement
@@ -81,7 +93,7 @@ def est_position(vel ,timepoints) :
 
 # plot 2d data
 def plot_2D(xdata,ydata, xlabel, ylabel,title):
-    plt.plot(xdata,ydata,linestyle ='-', color ='g')
+    plt.scatter(xdata,ydata, s =5, color ='blue')
     plt.xlabel(xlabel=xlabel)
     plt.ylabel(ylabel=ylabel)
     plt.title(title)
@@ -104,14 +116,14 @@ def plot_3D(xdata, ydata, zdata):
 
 def main() :
     # bias
-    bias_x = 0 #0.00273906
-    bias_y = 0 #0.01719892
-    bias_z = 0 #-0.002825
+    bias_x = 0.00273906
+    bias_y = 0.01719892
+    bias_z = -0.002825
     bias = [bias_x, bias_y, bias_z]
     # scale factor
-    sf_x   = 0 #0.00068967
-    sf_y   = 0 #0.0003230
-    sf_z   = 0 #0.00147083
+    sf_x   = 0.00068967
+    sf_y   = 0.0003230
+    sf_z   = 0.00147083
     sf = [sf_x, sf_y, sf_z]
     gravity = 9.8
     file_path = 'imu_data.yaml'
@@ -120,23 +132,23 @@ def main() :
     time_points = list(map(lambda x: extract_time(x),data))
     # get the acceleration
     print('extracting acceleration data...') # this is goint to be changed
-    acclrtn = list(map(lambda a : extract_acc(a, bias=bias,sf=sf), data))
-    acc_x =  (list(map( lambda d : d[0, 0], acclrtn)))  # get acceleration in x direction
-    acc_y =  (list(map( lambda d : d[1, 0], acclrtn)))  # get acceleration in y direction
-    acc_z =  (list(map( lambda d : d[2, 0], acclrtn)))  # get accelration in z direction
+    acclrtn =  list(map(lambda a : extract_acc(a, bias=bias,sf=sf), data))
+    acc_x   =  (list(map( lambda d : d[0, 0], acclrtn)))  # get acceleration in x direction
+    acc_y   =  (list(map( lambda d : d[1, 0], acclrtn)))  # get acceleration in y direction
+    acc_z   =  (list(map( lambda d : d[2, 0], acclrtn)))  # get accelration in z direction
     # get the velocity
     vel_x = (est_vel(acc_x,time_points))
     vel_y = (est_vel(acc_y,time_points))
     vel_z = (est_vel(acc_y,time_points))
     # get the position
-    pos_x = est_position(vel_x,time_points)
-    pos_y = est_position(vel_y,time_points)
-    pos_z = est_position(vel_z,time_points)
+    pos_x = (est_position(vel_x,time_points))
+    pos_y = (est_position(vel_y,time_points))
+    pos_z =  est_position(vel_z,time_points)
     # plot
-    # plot_2D(pos_x,pos_y,xlabel='x-position', ylabel='y-position', title='position-xy-plane')
-    # plot_2D(time_points,vel_x,xlabel='time', ylabel='vel-x', title='velocity-x')
-    # plot_2D(time_points,vel_y,xlabel='time', ylabel='vel-y', title='velocity-y')
+    plot_2D(pos_x, pos_y, xlabel='x-position', ylabel='y-position', title='position-xy-plane')
+    plot_2D(time_points,vel_x,xlabel='time', ylabel='vel-x', title='velocity-x')
+    plot_2D(time_points,vel_y,xlabel='time', ylabel='vel-y', title='velocity-y')
     # plot_3D(pos_x, pos_y, pos_z)
-    plot_2D(time_points,acc_z,xlabel='time', ylabel='Acceleration z', title='Acceleration')
+    # plot_2D(time_points,acc_x,xlabel='time', ylabel='Acceleration z', title='Acceleration')
 
 main()
