@@ -83,5 +83,6 @@ if __name__ == "__main__" :
     pos_y = est_position(vel_y,time_points)
     pos_z = est_position(vel_z,time_points)
 
-    plot_2D(pos_x,pos_y,xlabel='x-position', ylabel='y-position', title='position-xy-plane')
-       
+    plot_2D(xdata=time_points,ydata=acc_x,xlabel='x-position', ylabel='y-position', title='position-xy-plane')
+    plot_2D(xdata=time_points,ydata=acc_y,xlabel='x-position', ylabel='y-position', title='position-xy-plane')
+           

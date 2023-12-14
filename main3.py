@@ -4,7 +4,11 @@ from scipy.signal import detrend
 import numpy as np
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
+from filterpy.kalman import KalmanFilter 
+from filterpy.common import Q_discrete_white_noise
+from scipy.signal import butter, filtfilt
 
+# USING RATE OF CHANGE OF TRANSFORMATION MATRIX
 
 # read yaml file and return the data as python dictionary
 def read_yaml(filepath) :  
@@ -15,11 +19,21 @@ def read_yaml(filepath) :
 
 # extract angular velocity
 def extract_angvel(data) :
+    
+    #gyro bias
+    bg_x = 0 #-0.0041959
+    bg_y = 0 #0.00116651
+    bg_z = 0 #-0.001339
+
+    #gyro scale factor
+    sg_x = 0 #-0.9885
+    sg_y = 0 #-0.97 
+    sg_z = 0 #-0.966
     raw_data = data['angular_velocity']
     angular_vel = np.zeros(3, dtype=np.float64)
-    angular_vel[0] = raw_data['x']
-    angular_vel[1] = raw_data['y']
-    angular_vel[2] = raw_data['z']
+    angular_vel[0] = (raw_data['x'] - bg_x)/ (1+sg_x)
+    angular_vel[1] = (raw_data['y'] - bg_y)/ (1+sg_y)
+    angular_vel[2] = (raw_data['z'] - bg_z)/ (1+sg_z)
     return angular_vel
 
 # compute transfromation matrix
@@ -67,7 +81,7 @@ def extract(data, timepoints, bias, sf):
         s = np.sin(theta)/theta
         c = (1- np.cos(theta)) / theta ** 2
         R_K1 = R_K @ (I + s * S  + c * S  @ S )
-        acc_trn = R_K1 @ np.array([[acc_x[i]],[acc_y[i]],[acc_z[i]]]) #- R_K1 @ gravity
+        acc_trn = R_K1 @ np.array([[acc_x[i]],[acc_y[i]],[acc_z[i]]]) - R_K1 @ gravity
         R_K = R_K1
         acc_x_trn[i] = acc_trn[0, 0]
         acc_y_trn[i] = acc_trn[1, 0]
@@ -75,11 +89,22 @@ def extract(data, timepoints, bias, sf):
     return {'acc_x' : acc_x_trn, 'acc_y' : acc_y_trn, 'acc_z' : acc_z_trn} # acceleration tranformed to initial frame
 
 # estimate velocity
-def est_vel(acc, timepoints) :
+def est_vel(acc, timepoints, acceleration,thr) :
     print('estimating velocity by integrating acc...')
     vel = np.zeros_like(acc)
     vel = integrate.cumtrapz(acc,x=timepoints,initial=0)
-    return vel
+
+    velo = np.zeros_like(acc)
+    velo[0] = 0
+    threshold = thr
+    for i in range(1, len(acc)) :
+        if np.linalg.norm([acceleration['acc_x'][i], acceleration['acc_y'][i]]) < threshold :
+            vel[i] = 0
+        else :
+            delt = timepoints[i] - timepoints[i-1]
+            delv = delt * acc[i]
+            velo[i] = delv + velo[i-1]
+    return velo
 
 # estimate displacement
 def est_position(vel ,timepoints) :
@@ -112,43 +137,65 @@ def plot_3D(xdata, ydata, zdata):
     plt.show()
 
 
+def butter_lowpass_filter(data):
+    order = 3
+    cutoff_frequency = 60
+    sampling_frequency = 155
+    nyquist_frequency = 0.5 * sampling_frequency
+    normal_cutoff = cutoff_frequency / nyquist_frequency
+    b, a = butter(order, normal_cutoff, btype='low', analog=False)
+    filtered_data = filtfilt(b, a, data)
+    return filtered_data
+
 def main() :
     # calibartion datas
-    bias_x = 0 #0.00273906
-    bias_y = 0 #0.01719892
-    bias_z = 0 #-0.002825
+    bias_x = 0.00273906
+    bias_y = 0.01719892
+    bias_z = -0.002825
     bias = [bias_x, bias_y, bias_z]
-    sf_x   = 0 #0.00068967
-    sf_y   = 0 #0.0003230
-    sf_z   = 0 #0.00147083
+    sf_x   = 0.00068967
+    sf_y   = 0.0003230
+    sf_z   = 0.00147083
     sf = [sf_x, sf_y, sf_z]
-    gravity = 9.8
-    file_path = 'imu_data.yaml'
+
+    # get the data as python dictionary
+    file_path = 'try1.yaml'
     data = read_yaml(filepath=file_path)
     print('extracting time points....')
     time_points = list(map(lambda x: extract_time(x),data))
+
+
     # get the acceleration
     print('extracting acceleration data...') # this is goint to be changed
     acclrtn = extract(data=data,bias=bias,sf=sf, timepoints=time_points)
-    acc_x =  (acclrtn['acc_x'])  # get acceleration in x direction
-    acc_y =  (acclrtn['acc_y'])  # get acceleration in y direction
+    acc_x =  butter_lowpass_filter(acclrtn['acc_x'])  # get acceleration in x direction
+    acc_y =  butter_lowpass_filter(acclrtn['acc_y'])  # get acceleration in y direction
     acc_z =  (acclrtn['acc_z'])  # get accelration in z direction
+
+
     # get the velocity
-    vel_x = (est_vel(acc_x,time_points))
-    vel_y = (est_vel(acc_y,time_points)) 
-    vel_z = (est_vel(acc_z,time_points))
+    vel_x = (est_vel(acc_x,time_points, acceleration=acclrtn, thr=0.2))
+    vel_y = (est_vel(acc_y,time_points, acceleration=acclrtn, thr=0.2)) 
+    # vel_z = (est_vel(acc_z,time_points, acceleration=acclrtn))
+
+
     # get the position
     pos_x = (est_position(vel_x,time_points))
     pos_y = (est_position(vel_y,time_points))
-    pos_z = est_position(vel_z,time_points)
+    # pos_z = est_position(vel_z,time_points)
+
+
     # plot
     plot_2D(pos_x,pos_y,xlabel='x-position', ylabel='y-position', title='position-xy-plane')
-    plot_2D(time_points,vel_x,xlabel='time', ylabel='vel-x', title='velocity-x')
-    plot_2D(time_points,vel_y,xlabel='time', ylabel='vel-y', title='velocity-y')
-    #plot_3D(pos_x, pos_y, pos_z)
-    plot_2D(time_points,acc_z,xlabel='time', ylabel='acc-z', title='acc_z')
+    # plot_2D(time_points,vel_x,xlabel='time', ylabel='vel-x',      title='velocity-x')
+    # plot_2D(time_points,vel_y,xlabel='time', ylabel='vel-y',      title='velocity-y')
+    # plot_3D(pos_x, pos_y, pos_z)
+    # plot_2D(time_points,acc_x,xlabel='time', ylabel='acc-z', title='acc_z')
+    # plot_2D(time_points,acclrtn['acc_x'],xlabel='time', ylabel='acc-z', title='acc_z')
 
 main()
 
 
-# i got better result only detrending velocity and displacment only
+
+# def apply_kf() :
+#    f = KalmanFilter(dim_x=, dim_z=)
